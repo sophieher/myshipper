@@ -66,7 +66,7 @@ def get_rates_from_usps(params):
         mail_s = postage.find('MailService')
         rate_d['Rate'] = rate.text
         rate_d['Mail Class'] = mail_s.text
-        rate_l.append(rate_d)
+        rate_list.append(rate_d)
     rate_response = {'data': rate_list}
     return rate_response
     
