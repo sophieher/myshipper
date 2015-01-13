@@ -9,7 +9,7 @@ class RatesTest(TestCase):
     
     def test_rates_no_params(self):
         response = client.get(reverse('rates'))
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
     
     def test_rates_200(self):
         response = client.get('/rates/', {'o_zip':78756, 'd_zip':'01354', 'lbs':2})
@@ -31,7 +31,7 @@ class LabelsTest(TestCase):
     
     def test_labels_no_params(self):
         response = client.get(reverse('label'))
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
         
     def test_labels_200(self):
         response = client.get('/label/', self.label_test_request)
