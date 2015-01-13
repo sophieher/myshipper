@@ -1,11 +1,20 @@
 import requests
 import xml.etree.ElementTree as ET
+from ratesapp.settings import DEBUG
 
 USPS_KEY = '161SELF05974'
 USPS_PASS = '136AV76AZ752'
-SERVER = 'https://secure.shippingapis.com/ShippingAPI.dll'
+LABEL_SERVER = 'https://secure.shippingapis.com/ShippingAPI.dll'
+RATE_SERVER = 'http://production.shippingapis.com/ShippingAPI.dll'
 
-
+# Would change the API if User ID key was validated for actual label printing
+if DEBUG:
+    LABEL_API = 'DelivConfirmCertifyV4'
+    LABEL_REQUEST = 'DelivConfirmCertifyV4.0Request'
+else:
+    LABEL_API = 'DeliveryConfirmationV4'
+    LABEL_REQUEST = 'DeliveryConfirmationV4.0Request'
+    
 # Error to throw might need JSON response rather than simple string
 class BadRequestError(Exception):
     def __init__(self, number, description):
@@ -23,6 +32,7 @@ def validate_required_rates(params):
         raise BadRequestError(1, 'You are missing the required destination zip')
     elif not params.get('lbs'):
         raise BadRequestError(1, 'You are missing the required weight in lbs')
+
         
 def build_rates_xml(rate):
     root = ET.Element('RateV4Request', attrib={'USERID':USPS_KEY})
@@ -30,8 +40,8 @@ def build_rates_xml(rate):
     package = ET.SubElement(root,'Package', attrib={'ID':'1ST'})
     for elem in rate:
         ET.SubElement(package, elem).text = rate[elem]
-    print ET.tostring(root)
     return ET.tostring(root, encoding="UTF-8", method='xml')
+
 
 from collections import OrderedDict
 def get_rates_from_usps(params):    
@@ -47,6 +57,7 @@ def get_rates_from_usps(params):
     rate['Ounces'] = params.get('oz', '0')
     rate['Container'] = params.get('container', '')
     rate['Size'] = params.get('size', 'REGULAR')
+    
     if rate['Size'].lower() == 'large':
         rate['Width'] = params.get('width')
         rate['Length'] = params.get('length')
@@ -61,10 +72,9 @@ def get_rates_from_usps(params):
     or rate['Service'] == 'FIRST CLASS HFP COMMERCIAL':
         raise BadRequestError(2, 'You must specify a first class mail type (fcm_type) for First Class Service')
 
-    url = 'http://production.shippingapis.com/ShippingAPI.dll'
     rate_xml = build_rates_xml(rate)
     data = {'XML':rate_xml, 'API':'RateV4'}
-    response = requests.get(url, params=data)
+    response = requests.get(RATE_SERVER, params=data)
     
     root = ET.fromstring(response.content)
     rate_list = []
@@ -77,7 +87,7 @@ def get_rates_from_usps(params):
     
 # build the XML for the label request    
 def build_label_xml(labels):
-    root = ET.Element('DelivConfirmCertifyV4.0Request', attrib={'USERID':USPS_KEY, 'PASSWORD':USPS_PASS})
+    root = ET.Element(LABEL_REQUEST, attrib={'USERID':USPS_KEY, 'PASSWORD':USPS_PASS})
     ET.SubElement(root, 'Revision').text = '2'
     for elem in labels:
         ET.SubElement(root, elem).text = labels[elem]
@@ -85,7 +95,6 @@ def build_label_xml(labels):
 
 # Get helper for view for label retrieval    
 def get_label_from_usps(params):
-    delivery_confirm = []
     labels = OrderedDict()
     labels['FromName'] = params.get('f_name', '')
     labels['FromFirm'] = params.get('f_company', '')
@@ -123,8 +132,8 @@ def get_label_from_usps(params):
     labels['ReturnCommitments'] = params.get('return_commitments','')
     
     label_xml = build_label_xml(labels)
-    data = {'XML':label_xml, 'API':'DelivConfirmCertifyV4'}
-    label_response = requests.get(SERVER, params=data)
+    data = {'XML':label_xml, 'API':LABEL_API}
+    label_response = requests.get(LABEL_SERVER, params=data)
     
     root = ET.fromstring(label_response.content)
     # Pass through USPS Error code
