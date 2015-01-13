@@ -17,122 +17,112 @@ class BadRequestError(Exception):
 
 def validate_required_rates(params):
     # These are required parameters
-    if not params.get('o_zip') or not params.get('d_zip') or not params.get('lbs'):
-        raise BadRequestError(1, 'You are missing the required parameters')
+    if not params.get('o_zip'):
+        raise BadRequestError(1, 'You are missing the required origin zip')
+    elif not params.get('d_zip'):
+        raise BadRequestError(1, 'You are missing the required destination zip')
+    elif not params.get('lbs'):
+        raise BadRequestError(1, 'You are missing the required weight in lbs')
+        
+def build_rates_xml(rate):
+    root = ET.Element('RateV4Request', attrib={'USERID':USPS_KEY})
+    ET.SubElement(root,'Revision')
+    package = ET.SubElement(root,'Package', attrib={'ID':'1ST'})
+    for elem in rate:
+        ET.SubElement(package, elem).text = rate[elem]
+    print ET.tostring(root)
+    return ET.tostring(root, encoding="UTF-8", method='xml')
 
-
-def get_rates_from_usps(params):
-    package = '1ST'
-    
+from collections import OrderedDict
+def get_rates_from_usps(params):    
     # check that the required params are good
     validate_required_rates(params)
-        
-    service = params.get('mail_class', 'ALL')
-    fcm = params.get('fcm_type', '')
-    o_zip = params.get('o_zip')
-    d_zip = params.get('d_zip')
-    pounds = params.get('lbs', 0)
-    container = params.get('container', '')
-    oz = params.get('oz', 0)
-    size = params.get('size', 'REGULAR')
-    if size.lower() == 'large':
-        width = params.get('width')
-        height = params.get('height')
-        length = params.get('length')
-        girth = params.get('girth')
-    machinable = params.get('machinable', 'true')
+    rate = OrderedDict()
     
-    if fcm == '' and service == 'FIRST CLASS' \
-    or service == 'FIRST CLASS COMMERCIAL' \
-    or service == 'FIRST CLASS HFP COMMERCIAL':
+    rate['Service'] = params.get('mail_class', 'ALL')
+    rate['FirstClassMailType'] = params.get('fcm_type', '')
+    rate['ZipOrigination'] = params.get('o_zip')
+    rate['ZipDestination'] = params.get('d_zip')
+    rate['Pounds'] = params.get('lbs', '0')
+    rate['Ounces'] = params.get('oz', '0')
+    rate['Container'] = params.get('container', '')
+    rate['Size'] = params.get('size', 'REGULAR')
+    if rate['Size'].lower() == 'large':
+        rate['Width'] = params.get('width')
+        rate['Length'] = params.get('length')
+        rate['Height'] = params.get('height')
+        rate['Girth'] = params.get('girth')
+        if not rate['Width'] or not rate['Length'] or not rate['Height'] or not rate['Girth']:
+            raise BadRequestError(2, 'Dimensions are missing for package; unable to calculate postage. Additional Info: All dimensions must be greater than 0.')
+    rate['Machinable'] = params.get('machinable', 'true')
+    
+    if rate['FirstClassMailType'] == '' and rate['Service'] == 'FIRST CLASS' \
+    or rate['Service'] == 'FIRST CLASS COMMERCIAL' \
+    or rate['Service'] == 'FIRST CLASS HFP COMMERCIAL':
         raise BadRequestError(2, 'You must specify a first class mail type (fcm_type) for First Class Service')
 
-    xml_string = """<RateV4Request USERID="%s"><Revision/>
-        <Package ID="%s">
-            <Service>%s</Service>
-            <FirstClassMailType>%s</FirstClassMailType>
-            <ZipOrigination>%s</ZipOrigination>
-            <ZipDestination>%s</ZipDestination>
-            <Pounds>%s</Pounds>
-            <Ounces>%s</Ounces>
-            <Container>%s</Container>
-            <Size>%s</Size>
-            <Width>%s</Width>
-            <Height>%s</Height>
-            <Length>%s</Length>
-            <Girth>%s</Girth>
-            <Machinable>%s</Machinable>
-        </Package>
-    </RateV4Request>""" % \
-    (USPS_KEY, package, service, fcm, o_zip, d_zip, pounds, oz, container, size, machinable)
+    url = 'http://production.shippingapis.com/ShippingAPI.dll'
+    rate_xml = build_rates_xml(rate)
+    data = {'XML':rate_xml, 'API':'RateV4'}
+    response = requests.get(url, params=data)
     
-    url = 'http://production.shippingapis.com/ShippingAPI.dll?API=RateV4&XML='+xml_string
-    
-    response = requests.get(url)
     root = ET.fromstring(response.content)
-        
     rate_list = []
     for postage in root[0].findall('Postage'):
-        rate_d = {}
         rate = postage.find('Rate')
         mail_s = postage.find('MailService')
-        rate_d['Rate'] = rate.text
-        rate_d['Mail Class'] = mail_s.text
-        rate_list.append(rate_d)
+        rate_list.append({'Rate': rate.text, 'Mail Class': mail_s.text})
     rate_response = {'data': rate_list}
     return rate_response
     
-    
-def build_label_xml(label_list):
-    labels = ['FromName', 'FromFirm', 'FromAddress1', 'FromAddress2', 'FromCity', 'FromState', 'FromZip5', 'FromZip4',\
-            'ToName', 'ToFirm','ToAddress1','ToAddress2','ToCity','ToState','ToZip5','ToZip4',\
-            'ToPOBoxFlag', 'WeightInOunces', 'ServiceType', 'SeparateReceiptPage', 'POZipCode','ImageType','AddressServiceRequested',\
-            'HoldForManifest', 'Container','Size','Width','Length','Height','Girth','ReturnCommitments']
+# build the XML for the label request    
+def build_label_xml(labels):
     root = ET.Element('DelivConfirmCertifyV4.0Request', attrib={'USERID':USPS_KEY, 'PASSWORD':USPS_PASS})
     ET.SubElement(root, 'Revision').text = '2'
-    for i in range(len(labels)):
-        ET.SubElement(root, labels[i]).text = label_list[i+2]
+    for elem in labels:
+        ET.SubElement(root, elem).text = labels[elem]
     return ET.tostring(root, encoding="UTF-8", method='xml')
 
 # Get helper for view for label retrieval    
 def get_label_from_usps(params):
-    delivery_confirm = [USPS_KEY, USPS_PASS]
-    delivery_confirm.append(params.get('f_name', ''))
-    delivery_confirm.append(params.get('f_company', ''))
-    delivery_confirm.append(params.get('f_address_1',''))
-    delivery_confirm.append(params.get('f_address_2'))
-    delivery_confirm.append(params.get('f_city'))
-    delivery_confirm.append(params.get('f_state'))
-    delivery_confirm.append(params.get('f_zip5'))
-    delivery_confirm.append(params.get('f_zip4', ''))
+    delivery_confirm = []
+    labels = OrderedDict()
+    labels['FromName'] = params.get('f_name', '')
+    labels['FromFirm'] = params.get('f_company', '')
+    labels['FromAddress1'] = params.get('f_address_1','')
+    labels['FromAddress2'] = params.get('f_address_2')
+    labels['FromCity'] = params.get('f_city')
+    labels['FromState'] = params.get('f_state')
+    labels['FromZip5'] = params.get('f_zip5')
+    labels['FromZip4'] = params.get('f_zip4', '')
     
-    delivery_confirm.append(params.get('to_name', ''))
-    delivery_confirm.append(params.get('to_company', ''))
-    delivery_confirm.append(params.get('to_address_1',''))
-    delivery_confirm.append(params.get('to_address_2'))
-    delivery_confirm.append(params.get('to_city'))
-    delivery_confirm.append(params.get('to_state'))
-    delivery_confirm.append(params.get('to_zip5'))
-    delivery_confirm.append(params.get('to_zip4', ''))
-    delivery_confirm.append(params.get('to_pob', ''))
+    labels['ToName'] = params.get('to_name', '')
+    labels['ToFirm'] = params.get('to_company', '')
+    labels['ToAddress1'] = params.get('to_address_1','')
+    labels['ToAddress2'] = params.get('to_address_2')
+    labels['ToCity'] = params.get('to_city')
+    labels['ToState'] = params.get('to_state')
+    labels['ToZip5'] = params.get('to_zip5')
+    labels['ToZip4'] = params.get('to_zip4', '')
+    labels['ToPOBoxFlag'] = params.get('to_pob', '')
     
-    delivery_confirm.append(params.get('weight', ''))
-    delivery_confirm.append(params.get('mail_class', ''))
-    delivery_confirm.append(params.get('separate_receipt', ''))
-    delivery_confirm.append(params.get('po_zip', ''))
-    delivery_confirm.append('PDF')
-    delivery_confirm.append(params.get('address_service_request',''))
-    delivery_confirm.append(params.get('hold_for_manifest',''))
+    labels['WeightInOunces'] = params.get('weight', '')
+    labels['ServiceType'] = params.get('mail_class', '')
+    labels['SeparateReceiptPage'] = params.get('separate_receipt', '')
+    labels['POZipCode'] = params.get('po_zip', '')
+    labels['ImageType'] = 'PDF'
+    labels['AddressServiceRequested'] = params.get('address_service_request','')
+    labels['HoldForManifest'] = params.get('hold_for_manifest','')
     
-    delivery_confirm.append(params.get('container', ''))
-    delivery_confirm.append(params.get('size',''))
-    delivery_confirm.append(params.get('width', ''))
-    delivery_confirm.append(params.get('length', ''))
-    delivery_confirm.append(params.get('height', ''))
-    delivery_confirm.append(params.get('girth', ''))
-    delivery_confirm.append(params.get('return_commitments',''))
+    labels['Container'] = params.get('container', '')
+    labels['Size'] = params.get('size','')
+    labels['Width'] = params.get('width', '')
+    labels['Length'] = params.get('length', '')
+    labels['Height'] = params.get('height', '')
+    labels['Girth'] = params.get('girth', '')
+    labels['ReturnCommitments'] = params.get('return_commitments','')
     
-    label_xml = build_label_xml(delivery_confirm)
+    label_xml = build_label_xml(labels)
     data = {'XML':label_xml, 'API':'DelivConfirmCertifyV4'}
     label_response = requests.get(SERVER, params=data)
     
