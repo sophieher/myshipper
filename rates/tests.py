@@ -40,3 +40,12 @@ class LabelsTest(TestCase):
     def test_labels_content_type(self):
         response = client.get('/label/', self.label_test_request)
         self.assertEqual(response['Content-Type'], 'application/pdf')
+        
+    def test_labels_content(self):
+        response = client.get('/label/', self.label_test_request)
+        pdf_text = open('test.txt').read()
+        out_text = open('out1.txt', 'w')
+        out_text.write(response.content)
+        out_text.close()
+        out_text = open('out1.txt').read()
+        self.assertEqual(out_text[:500], pdf_text[:500])
