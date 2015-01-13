@@ -3,22 +3,6 @@ import xml.etree.ElementTree as ET
 from ratesapp.settings import DEBUG
 from collections import OrderedDict
 
-USPS_KEY = '161SELF05974'
-USPS_PASS = '136AV76AZ752'
-LABEL_SERVER = 'https://secure.shippingapis.com/ShippingAPI.dll'
-RATE_SERVER = 'http://production.shippingapis.com/ShippingAPI.dll'
-SERVER = {'rate':RATE_SERVER, 'label':LABEL_SERVER}
-
-API = {'rate':'RateV4','label':'DelivConfirmCertifyV4'}
-# Would change the API if User ID key was validated for actual label printing
-if DEBUG:
-    LABEL_API = 'DelivConfirmCertifyV4'
-    LABEL_REQUEST = 'DelivConfirmCertifyV4.0Request'
-else:
-    LABEL_API = 'DeliveryConfirmationV4'
-    LABEL_REQUEST = 'DeliveryConfirmationV4.0Request'
-    
-
 # Error to throw might need JSON response rather than simple string
 class BadRequestError(Exception):
     def __init__(self, number, description):
@@ -27,19 +11,33 @@ class BadRequestError(Exception):
     def __str__(self):
         return 'Error number: %s\n Description: %s' % (self.number, self.description)
         
- 
+         
 class USPSRequester(object):
+    USPS_KEY = '161SELF05974'
+    USPS_PASS = '136AV76AZ752'
+    LABEL_SERVER = 'https://secure.shippingapis.com/ShippingAPI.dll'
+    RATE_SERVER = 'http://production.shippingapis.com/ShippingAPI.dll'
+    SERVER = {'rate':RATE_SERVER, 'label':LABEL_SERVER}
+    API = {'rate':'RateV4','label':'DelivConfirmCertifyV4'}
+    
     def __init__(self, endpoint_type, request_qd):
         self.endpoint_type = endpoint_type
         self.request_qd = request_qd
         self.dict_of_request = OrderedDict()
+        
+    def validate_size(self):
+        if self.request_qd.get('size') and self.request_qd.get('size').lower() == 'large':
+            if not self.dict_of_request['Width'] or not self.dict_of_request['Length'] or not self.dict_of_request['Height'] or not rate['Girth']:
+                raise BadRequestError(2, 'Dimensions are missing for package;\
+                 unable to calculate postage. Additional Info: All dimensions \
+                 must be greater than 0.')
     
     def build_xml_root(self):
         if self.endpoint_type == 'rate':
-            root = ET.Element('RateV4Request', attrib={'USERID':USPS_KEY})
+            root = ET.Element('RateV4Request', attrib={'USERID':self.USPS_KEY})
             ET.SubElement(root,'Revision')
         elif self.endpoint_type == 'label':
-            root = ET.Element(LABEL_REQUEST, attrib={'USERID':USPS_KEY, 'PASSWORD':USPS_PASS})
+            root = ET.Element(self.LABEL_REQUEST, attrib={'USERID':self.USPS_KEY, 'PASSWORD':self.USPS_PASS})
             ET.SubElement(root, 'Revision').text = '2'
         return root
 
@@ -51,8 +49,8 @@ class USPSRequester(object):
         
     def make_request(self):
         xml = self.generate_xml_string()
-        data = {'XML':xml, 'API':API[self.endpoint_type]}
-        return requests.get(SERVER[self.endpoint_type], params=data)
+        data = {'XML':xml, 'API':self.API[self.endpoint_type]}
+        return requests.get(self.SERVER[self.endpoint_type], params=data)
         
 class RatesRequester(USPSRequester):
     def __init__(self, request_qd):
@@ -69,7 +67,7 @@ class RatesRequester(USPSRequester):
         self.dict_of_request['Ounces'] = self.request_qd.get('oz', '0')
         self.dict_of_request['Container'] = self.request_qd.get('container', '')
         self.dict_of_request['Size'] = self.request_qd.get('size', 'REGULAR')
-    
+        self.validate_size()
         if self.dict_of_request['Size'].lower() == 'large':
             self.dict_of_request['Width'] = self.request_qd.get('width')
             self.dict_of_request['Length'] = self.request_qd.get('length')
@@ -92,11 +90,6 @@ class RatesRequester(USPSRequester):
             raise BadRequestError(1, 'You are missing the required destination zip')
         elif not self.request_qd.get('lbs'):
             raise BadRequestError(1, 'You are missing the required weight in lbs')
-        elif self.request_qd.get('size') and self.request_qd.get('size').lower() == 'large':
-            if not self.dict_of_request['Width'] or not self.dict_of_request['Length'] or not self.dict_of_request['Height'] or not rate['Girth']:
-                raise BadRequestError(2, 'Dimensions are missing for package;\
-                 unable to calculate postage. Additional Info: All dimensions \
-                 must be greater than 0.')
     
     def validate_first_class(self):
         if self.dict_of_request['FirstClassMailType'] == '' and \
@@ -115,6 +108,7 @@ class RatesRequester(USPSRequester):
         return {'data': rate_list}
 
 class LabelRequester(USPSRequester):
+    LABEL_REQUEST = 'DelivConfirmCertifyV4.0Request'
     def __init__(self, request_qd):
         super(LabelRequester, self).__init__('label',request_qd)
     
@@ -148,10 +142,12 @@ class LabelRequester(USPSRequester):
     
         self.dict_of_request['Container'] = self.request_qd.get('container', '')
         self.dict_of_request['Size'] = self.request_qd.get('size','')
-        self.dict_of_request['Width'] = self.request_qd.get('width', '')
-        self.dict_of_request['Length'] = self.request_qd.get('length', '')
-        self.dict_of_request['Height'] = self.request_qd.get('height', '')
-        self.dict_of_request['Girth'] = self.request_qd.get('girth', '')
+        self.validate_size()
+        if self.dict_of_request['Size'].lower() == 'large':
+            self.dict_of_request['Width'] = self.request_qd.get('width', '')
+            self.dict_of_request['Length'] = self.request_qd.get('length', '')
+            self.dict_of_request['Height'] = self.request_qd.get('height', '')
+            self.dict_of_request['Girth'] = self.request_qd.get('girth', '')
         self.dict_of_request['ReturnCommitments'] = self.request_qd.get('return_commitments','')
         
     def create_response(self, root):
@@ -163,20 +159,20 @@ class LabelRequester(USPSRequester):
             img_name = root.find('DeliveryConfirmationNumber').text + '.pdf'
             return (image, img_name)
 
-
-def get_rates_from_usps(params):        
-    raterequester = RatesRequester(params)
-    raterequester.fill_dict_of_requests()
-    reqst = raterequester.make_request().content
+# Does the request cycle, 
+# fills the dictionary of the requester
+# makes the request to USPS then builds and returns a response
+def do_request(requester):
+    requester.fill_dict_of_requests()# = labels
+    reqst = requester.make_request().content
     root = ET.fromstring(reqst)
-    return raterequester.create_response(root)
-
-
-# Get helper for view for label retrieval    
-def get_label_from_usps(params):
-    labelrequester = LabelRequester(params)
-    labelrequester.fill_dict_of_requests()# = labels
-    reqst = labelrequester.make_request().content
-    root = ET.fromstring(reqst)
-    return labelrequester.create_response(root)
+    return requester.create_response(root)
     
+# GET helper for view for rates retrieval 
+def get_rates_from_usps(params):        
+    return do_request(RatesRequester(params))
+
+
+# GET helper for view for label retrieval    
+def get_label_from_usps(params):
+    return do_request(LabelRequester(params))
