@@ -31,6 +31,7 @@ class USPSRequester(object):
                 raise BadRequestError(2, 'Dimensions are missing for package;\
                  unable to calculate postage. Additional Info: All dimensions \
                  must be greater than 0.')
+
     
     def build_xml_root(self):
         if self.endpoint_type == 'rate':
@@ -66,6 +67,7 @@ class RatesRequester(USPSRequester):
         self.dict_of_request['Pounds'] = self.request_qd.get('lbs', '0')
         self.dict_of_request['Ounces'] = self.request_qd.get('oz', '0')
         self.dict_of_request['Container'] = self.request_qd.get('container', '')
+        #validate container if size == large
         self.dict_of_request['Size'] = self.request_qd.get('size', 'REGULAR')
         self.validate_size()
         if self.dict_of_request['Size'].lower() == 'large':
@@ -73,8 +75,12 @@ class RatesRequester(USPSRequester):
             self.dict_of_request['Length'] = self.request_qd.get('length')
             self.dict_of_request['Height'] = self.request_qd.get('height')
             self.dict_of_request['Girth'] = self.request_qd.get('girth')
+        # self.dict_of_request['Value'] = self.request_qd.get('value','')
+        # self.dict_of_request['AmountToCollect'] = self.request_qd.get('amt_to_collect','')
         self.dict_of_request['Machinable'] = self.request_qd.get('machinable', 'true')
-            
+        # self.dict_of_request['ReturnLocations'] = self.request_qd.get('return_loc','')
+#         self.dict_of_request['ReturnServiceInfo']= self.request_qd.get('return_info','')
+        
     def generate_xml_string(self):
         root = super(RatesRequester, self).build_xml_root()
         package = ET.SubElement(root,'Package', attrib={'ID':'1ST'})

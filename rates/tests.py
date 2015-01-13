@@ -12,15 +12,15 @@ class RatesTest(TestCase):
         self.assertEqual(response.status_code, 200)
     
     def test_rates_200(self):
-        response = client.get('/rates/', {'o_zip':78756, 'd_zip':'01354', 'lbs':2})
+        response = client.get(reverse('rates'), {'o_zip':78756, 'd_zip':'01354', 'lbs':2})
         self.assertEqual(response.status_code, 200)
     
     def test_rates_content(self):
-        response = client.get('/rates/', {'o_zip':78756, 'd_zip':'01354', 'lbs':2})
+        response = client.get(reverse('rates'), {'o_zip':78756, 'd_zip':'01354', 'lbs':2})
         self.assertEqual(response.content, default_rates_string)
         
     def test_rates_content_type(self):
-        response = client.get('/rates/', {'o_zip':78756, 'd_zip':'01354', 'lbs':2})
+        response = client.get(reverse('rates'), {'o_zip':78756, 'd_zip':'01354', 'lbs':2})
         self.assertEqual(response['Content-Type'], 'application/json')
         
         
@@ -34,15 +34,15 @@ class LabelsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         
     def test_labels_200(self):
-        response = client.get('/label/', self.label_test_request)
+        response = client.get(reverse('label'), self.label_test_request)
         self.assertEqual(response.status_code, 200)
         
     def test_labels_content_type(self):
-        response = client.get('/label/', self.label_test_request)
+        response = client.get(reverse('label'), self.label_test_request)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         
     def test_labels_content(self):
-        response = client.get('/label/', self.label_test_request)
+        response = client.get(reverse('label'), self.label_test_request)
         pdf_text = open('test.txt').read()
         out_text = open('out1.txt', 'w')
         out_text.write(response.content)
