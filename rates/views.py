@@ -25,11 +25,10 @@ def rates(request):
 def label(request):
     try:
         response = get_label_from_usps(request.GET)
-        image = response.decode('base64')
+        image = response[0].decode('base64')
         data = HttpResponse(image, content_type="application/pdf")
-        # data['Content-Disposition'] = 'attachment; filename=myShipperLabel.png'
+        data['Content-Disposition'] = 'filename=%s'%response[1]
         return data
-        # return HttpResponse(response)
     except BadRequestError as e:  
         data = HttpResponse(status=400)  
         data.write(e)    
