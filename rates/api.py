@@ -18,7 +18,6 @@ class USPSRequester(object):
     LABEL_SERVER = 'https://secure.shippingapis.com/ShippingAPI.dll'
     RATE_SERVER = 'http://production.shippingapis.com/ShippingAPI.dll'
     SERVER = {'rate':RATE_SERVER, 'label':LABEL_SERVER}
-    API = {'rate':'RateV4','label':'DelivConfirmCertifyV4'}
     
     def __init__(self, endpoint_type, request_qd):
         self.endpoint_type = endpoint_type
@@ -26,19 +25,17 @@ class USPSRequester(object):
         self.dict_of_request = OrderedDict()
         
     def validate_size(self):
-        if self.request_qd.get('size') and self.request_qd.get('size').lower() == 'large':
-            if not self.dict_of_request['Width'] or not self.dict_of_request['Length'] or not self.dict_of_request['Height'] or not rate['Girth']:
-                raise BadRequestError(2, 'Dimensions are missing for package;\
-                 unable to calculate postage. Additional Info: All dimensions \
-                 must be greater than 0.')
+        if not self.dict_of_request['Width'] or not self.dict_of_request['Length'] or not self.dict_of_request['Height'] or not dict_of_request['Girth']:
+            raise BadRequestError(2, 'Dimensions are missing for package;\
+             unable to calculate postage. Additional Info: All dimensions \
+             must be greater than 0.')
 
     
     def build_xml_root(self):
+        root = ET.Element(self.request_type, attrib={'USERID':self.USPS_KEY, 'PASSWORD':self.USPS_PASS})
         if self.endpoint_type == 'rate':
-            root = ET.Element('RateV4Request', attrib={'USERID':self.USPS_KEY})
             ET.SubElement(root,'Revision')
         elif self.endpoint_type == 'label':
-            root = ET.Element(self.LABEL_REQUEST, attrib={'USERID':self.USPS_KEY, 'PASSWORD':self.USPS_PASS})
             ET.SubElement(root, 'Revision').text = '2'
         return root
 
@@ -50,36 +47,59 @@ class USPSRequester(object):
         
     def make_request(self):
         xml = self.generate_xml_string()
-        data = {'XML':xml, 'API':self.API[self.endpoint_type]}
+        data = {'XML':xml, 'API':self.API}
         return requests.get(self.SERVER[self.endpoint_type], params=data)
         
 class RatesRequester(USPSRequester):
+    international = False
+    API = 'RateV4'
+    request_type = 'RateV4Request'
     def __init__(self, request_qd):
         super(RatesRequester, self).__init__('rate', request_qd)
-        self.validate_required_fields()
     
     def fill_dict_of_requests(self):
-        self.dict_of_request['Service'] = self.request_qd.get('mail_class', 'ALL')
-        self.dict_of_request['FirstClassMailType'] = self.request_qd.get('fcm_type', '')
-        self.validate_first_class()
-        self.dict_of_request['ZipOrigination'] = self.request_qd.get('o_zip')
-        self.dict_of_request['ZipDestination'] = self.request_qd.get('d_zip')
-        self.dict_of_request['Pounds'] = self.request_qd.get('lbs', '0')
-        self.dict_of_request['Ounces'] = self.request_qd.get('oz', '0')
-        self.dict_of_request['Container'] = self.request_qd.get('container', '')
-        #validate container if size == large
-        self.dict_of_request['Size'] = self.request_qd.get('size', 'REGULAR')
-        self.validate_size()
-        if self.dict_of_request['Size'].lower() == 'large':
+        if self.request_qd.get('country'):
+            self.international = True
+            self.API = 'IntlRateV2'
+            self.request_type = 'IntlRateV2Request'
+            self.dict_of_request['Pounds'] = self.request_qd.get('lbs', '0')
+            self.dict_of_request['Ounces'] = self.request_qd.get('oz', '')
+            self.dict_of_request['Machinable'] = self.request_qd.get('machinable', 'true')
+            self.dict_of_request['MailType'] = self.request_qd.get('mail_type')
+            self.dict_of_request['ValueOfContents'] = self.request_qd.get('value')
+            self.dict_of_request['Country'] = self.request_qd.get('country')
+            self.dict_of_request['Container'] = self.request_qd.get('container', '')
+            self.dict_of_request['Size'] = self.request_qd.get('size', 'REGULAR')
+            
             self.dict_of_request['Width'] = self.request_qd.get('width')
             self.dict_of_request['Length'] = self.request_qd.get('length')
             self.dict_of_request['Height'] = self.request_qd.get('height')
             self.dict_of_request['Girth'] = self.request_qd.get('girth')
-        # self.dict_of_request['Value'] = self.request_qd.get('value','')
-        # self.dict_of_request['AmountToCollect'] = self.request_qd.get('amt_to_collect','')
-        self.dict_of_request['Machinable'] = self.request_qd.get('machinable', 'true')
-        # self.dict_of_request['ReturnLocations'] = self.request_qd.get('return_loc','')
-#         self.dict_of_request['ReturnServiceInfo']= self.request_qd.get('return_info','')
+            if self.dict_of_request['Size'].lower() == 'large':
+                self.validate_size()
+        else:
+            self.validate_required_fields()
+            self.dict_of_request['Service'] = self.request_qd.get('mail_class', 'ALL')
+            self.dict_of_request['FirstClassMailType'] = self.request_qd.get('fcm_type', '')
+            self.validate_first_class()
+            self.dict_of_request['ZipOrigination'] = self.request_qd.get('o_zip')
+            self.dict_of_request['ZipDestination'] = self.request_qd.get('d_zip')
+            self.dict_of_request['Pounds'] = self.request_qd.get('lbs', '0')
+            self.dict_of_request['Ounces'] = self.request_qd.get('oz', '0')
+            self.dict_of_request['Container'] = self.request_qd.get('container', '')
+            #validate container if size == large
+            self.dict_of_request['Size'] = self.request_qd.get('size', 'REGULAR')
+            if self.dict_of_request['Size'].lower() == 'large':
+                self.dict_of_request['Width'] = self.request_qd.get('width')
+                self.dict_of_request['Length'] = self.request_qd.get('length')
+                self.dict_of_request['Height'] = self.request_qd.get('height')
+                self.dict_of_request['Girth'] = self.request_qd.get('girth')
+                self.validate_size()
+            # self.dict_of_request['Value'] = self.request_qd.get('value','')
+            # self.dict_of_request['AmountToCollect'] = self.request_qd.get('amt_to_collect','')
+            self.dict_of_request['Machinable'] = self.request_qd.get('machinable', 'true')
+            # self.dict_of_request['ReturnLocations'] = self.request_qd.get('return_loc','')
+            # self.dict_of_request['ReturnServiceInfo']= self.request_qd.get('return_info','')
         
     def generate_xml_string(self):
         root = super(RatesRequester, self).build_xml_root()
@@ -106,15 +126,20 @@ class RatesRequester(USPSRequester):
     
     def create_response(self, root):
         rate_list = []
+        if self.international:
+            keys = ['Service', 'Postage','SvcDescription']
+        else:
+            keys = ['Postage', 'Rate','MailService']
         #then parse and return the data into a dictionary with a list of rates
-        for postage in root[0].findall('Postage'):
-            rate = postage.find('Rate')
-            mail_s = postage.find('MailService')
+        for postage in root[0].findall(keys[0]):
+            rate = postage.find(keys[1])
+            mail_s = postage.find(keys[2])
             rate_list.append({'Rate': rate.text, 'Mail Class': mail_s.text})
         return {'data': rate_list}
 
 class LabelRequester(USPSRequester):
-    LABEL_REQUEST = 'DelivConfirmCertifyV4.0Request'
+    request_type = 'DelivConfirmCertifyV4.0Request'
+    API = 'DelivConfirmCertifyV4'
     def __init__(self, request_qd):
         super(LabelRequester, self).__init__('label',request_qd)
     
@@ -148,12 +173,12 @@ class LabelRequester(USPSRequester):
     
         self.dict_of_request['Container'] = self.request_qd.get('container', '')
         self.dict_of_request['Size'] = self.request_qd.get('size','')
-        self.validate_size()
         if self.dict_of_request['Size'].lower() == 'large':
             self.dict_of_request['Width'] = self.request_qd.get('width', '')
             self.dict_of_request['Length'] = self.request_qd.get('length', '')
             self.dict_of_request['Height'] = self.request_qd.get('height', '')
             self.dict_of_request['Girth'] = self.request_qd.get('girth', '')
+            self.validate_size()
         self.dict_of_request['ReturnCommitments'] = self.request_qd.get('return_commitments','')
         
     def create_response(self, root):
@@ -175,7 +200,36 @@ def do_request(requester):
     return requester.create_response(root)
     
 # GET helper for view for rates retrieval 
-def get_rates_from_usps(params):        
+def get_rates_from_usps(params):  
+    # xml='''<IntlRateV2Request USERID="161SELF05974">
+#       <Package ID="1ST">
+#         <Pounds>15</Pounds>
+#         <Ounces>0</Ounces>
+#         ////            <Machinable>True</Machinable>
+#         <MailType>Package</MailType>
+#                         <GXG>
+#                               <POBoxFlag>Y</POBoxFlag>
+#                               <GiftFlag>Y</GiftFlag>
+#                         </GXG>
+#         <ValueOfContents>200</ValueOfContents>
+#         <Country>Canada</Country>
+#             <Container>RECTANGULAR</Container>
+#         <Size>LARGE</Size>
+#                 <Width>10</Width>
+#                 <Length>15</Length>
+#                 <Height>10</Height>
+#                 <Girth>0</Girth>
+#                         <CommercialFlag>N</CommercialFlag>
+#       </Package>
+#       </IntlRateV2Request>
+#
+#       '''
+#     label_url = 'http://production.shippingapis.com/ShippingAPI.dll?API=IntlRateV2&XML='+xml
+#     label_response = requests.get(label_url)
+#
+#     print label_response.status_code, label_response.content
+#     root = ET.fromstring(label_response.content)
+#     rate_l = []
     return do_request(RatesRequester(params))
 
 
