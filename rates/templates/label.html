@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Label{% endblock %}
+
+{% block body %}
+   <div class="preview-page">
+    <div class="container">
+      <div class="repository-with-sidebar repo-container with-full-navigation">
+          <div class="repository-content context-loader-container">
+            <div id="readme" class="boxed-group flush clearfix announce instapaper_body md">
+              
+              <div class="markdown-body entry-content">
+	<h1>My Shipper API - Label</h1>
+
+	<p>Label endpoint for generating labels from USPS.</p>
+
+<h3>
+<a id="user-content-get-label" class="anchor" href="#get-label" aria-hidden="true"><span class="octicon octicon-link"></span></a>GET label/</h3>
+
+<table>
+<thead>
+<tr>
+<th>Query Parameter</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>f_name</td>
+<td>
+<em>required</em>, Sender Name</td>
+</tr>
+<tr>
+<td>f_company</td>
+<td>
+<em>optional</em>, Sender company name</td>
+</tr>
+<tr>
+<td>f_address_1</td>
+<td>
+<em>optional</em>, Sender Address Line 1, for apartment, suite number, etc.</td>
+</tr>
+<tr>
+<td>f_address_2</td>
+<td>
+<em>required</em>, Sender Address Line 2, street address</td>
+</tr>
+<tr>
+<td>f_city</td>
+<td>
+<em>required</em>, Sender City</td>
+</tr>
+<tr>
+<td>f_state</td>
+<td>
+<em>required</em>, Sender State Code, two characters eg. TX or WA</td>
+</tr>
+<tr>
+<td>f_zip5</td>
+<td>
+<em>required</em>, Sender Zip Code</td>
+</tr>
+<tr>
+<td>f_zip4</td>
+<td>
+<em>optional</em>, Sender +4 Zip Code</td>
+</tr>
+<tr>
+<td>to_name</td>
+<td>
+<em>required</em>, Receiver Name</td>
+</tr>
+<tr>
+<td>to_company</td>
+<td>
+<em>optional</em>, Receiver company name</td>
+</tr>
+<tr>
+<td>to_address_1</td>
+<td>
+<em>optional</em>, Receiver Address Line 1, for apartment, suite number, etc.</td>
+</tr>
+<tr>
+<td>to_address_2</td>
+<td>
+<em>required</em>, Receiver Address Line 2, street address</td>
+</tr>
+<tr>
+<td>to_city</td>
+<td>
+<em>required</em>, Receiver City</td>
+</tr>
+<tr>
+<td>to_state</td>
+<td>
+<em>required</em>, Receiver State Code, two characters eg. TX or WA</td>
+</tr>
+<tr>
+<td>to_zip5</td>
+<td>
+<em>required</em>, Receiver Zip Code</td>
+</tr>
+<tr>
+<td>to_zip4</td>
+<td>
+<em>optional</em>, Receiver +4 Zip Code</td>
+</tr>
+<tr>
+<td>weight</td>
+<td>
+<em>required</em>, Weight in ounces</td>
+</tr>
+<tr>
+<td>mail_class</td>
+<td>
+<em>required</em>, USPS Service type of: Priority,First Class,Standard Post,Media Mail, Library Mail</td>
+</tr>
+<tr>
+<td>container</td>
+<td>
+<em>optional</em>, useful for USPS container types, <em>default</em>=VARIABLE</td>
+</tr>
+<tr>
+<td>size</td>
+<td>
+<em>optional</em>, used for USPS weight types, <em>default</em>=REGULAR, can be REGULAR or LARGE</td>
+</tr>
+<tr>
+<td>length</td>
+<td>required if size is LARGE, in inches</td>
+</tr>
+<tr>
+<td>width</td>
+<td>required if size is LARGE in inches</td>
+</tr>
+<tr>
+<td>height</td>
+<td>required if size is LARGE  in inches</td>
+</tr>
+<tr>
+<td>girth</td>
+<td>required if size is LARGE in inches</td>
+</tr>
+</tbody>
+</table>
+
+<h4>
+<a id="user-content-sample-get-request-with-required-parameters-only-1" class="anchor" href="#sample-get-request-with-required-parameters-only-1" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sample GET Request with Required Parameters Only</h4>
+
+<p>python</p>
+
+<pre><code>URL = '/label/?o_zip=78756&amp;d_zip=78701&amp;lbs=2'
+params={'f_name':'Sophie Hernandez', 'f_address_2':'5310 Joe Sayers Ave Apt 120',\
+        'f_city':'Austin','f_state':'TX','f_zip5':78756,'to_name':'Ben','to_address_2':'101 West 6th Street #405','to_city':'Austin',\
+        'to_zip5':78701,'to_state':'tx', 'mail_class':'Priority','weight':2}
+response = requests.get(URL, params=params)
+</code></pre>
+
+<p>200</p>
+
+<h4>
+<a id="user-content-sample-response-2" class="anchor" href="#sample-response-2" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sample Response</h4>
+
+<p><object data="http://goo.gl/CJMlN6" type="application/pdf" width="50%" height="50%"></p>
+
+              </div>
+            </div>
+          </div>
+        
+
+      </div>
+    </div>
+  </div>
+  {% endblock %}

@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Rates{% endblock %}
+
+{% block body %}
+   <div class="preview-page">
+    <div class="container">
+      <div class="repository-with-sidebar repo-container with-full-navigation">
+          <div class="repository-content context-loader-container">
+            <div id="readme" class="boxed-group flush clearfix announce instapaper_body md">
+              
+              <div class="markdown-body entry-content">
+	<h1>My Shipper API Rates</h1>
+
+	<p>Endpoint for getting shipping rates from USPS.</p>
+
+	<h3>
+	<a id="user-content-get-rates" class="anchor" href="#get-rates" aria-hidden="true"><span class="octicon octicon-link"></span></a>GET rates/</h3>
+
+	<table>
+	<thead>
+	<tr>
+	<th>Query Parameter</th>
+	<th>Notes</th>
+	</tr>
+	</thead>
+	<tbody>
+	<tr>
+	<td>o_zip</td>
+	<td>
+	<em>required</em>, Origin Zip Code</td>
+	</tr>
+	<tr>
+	<td>d_zip</td>
+	<td>
+	<em>required</em>, Destination Zip Code</td>
+	</tr>
+	<tr>
+	<td>lbs</td>
+	<td>
+	<em>required</em>, Weight in pounds</td>
+	</tr>
+	<tr>
+	<td>mail_class</td>
+	<td>
+	<em>optional</em>, USPS Service type of: Priority,First Class,Standard Post,Media Mail, Library Mail</td>
+	</tr>
+	<tr>
+	<td>fcm_type</td>
+	<td>required if mail_class = First Class; of: LETTER, Flat, Parcel, Postcard, or Package Service</td>
+	</tr>
+	<tr>
+	<td>oz</td>
+	<td>
+	<em>optional</em>, Weight in ounces, if over 1 lb</td>
+	</tr>
+	<tr>
+	<td>container</td>
+	<td>
+	<em>optional</em>, useful for USPS container types, <em>default</em>=VARIABLE</td>
+	</tr>
+	<tr>
+	<td>size</td>
+	<td>
+	<em>optional</em>, used for USPS weight types, <em>default</em>=REGULAR, can be REGULAR or LARGE</td>
+	</tr>
+	<tr>
+	<td>length</td>
+	<td>required if size is LARGE, in inches</td>
+	</tr>
+	<tr>
+	<td>width</td>
+	<td>required if size is LARGE in inches</td>
+	</tr>
+	<tr>
+	<td>height</td>
+	<td>required if size is LARGE  in inches</td>
+	</tr>
+	<tr>
+	<td>girth</td>
+	<td>required if size is LARGE in inches</td>
+	</tr>
+	<tr>
+	<td>machinable</td>
+	<td>required if mail_class is First Class and fcm is Letter or Flat, either true or false</td>
+	</tr>
+	</tbody>
+	</table>
+
+	<h4>
+	<a id="user-content-sample-get-request-with-required-parameters-only" class="anchor" href="#sample-get-request-with-required-parameters-only" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sample GET Request with Required Parameters Only</h4>
+
+	<pre><code>/rates/?o_zip=78756&amp;d_zip=78701&amp;lbs=2
+	</code></pre>
+
+	<h4>
+	<a id="user-content-sample-response" class="anchor" href="#sample-response" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sample Response</h4>
+
+	<pre><code>
+{"data": 
+	[{"Rate": "19.15", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt;"}, 
+	{"Rate": "19.15", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Hold For Pickup"}, 
+	{"Rate": "44.95", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Flat Rate Boxes"}, 
+	{"Rate": "44.95", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Flat Rate Boxes Hold For Pickup"}, 
+	{"Rate": "19.99", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Flat Rate Envelope"}, 
+	{"Rate": "19.99", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Flat Rate Envelope Hold For Pickup"}, 
+	{"Rate": "19.99", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Legal Flat Rate Envelope"},
+	 {"Rate": "19.99", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Legal Flat Rate Envelope Hold For Pickup"}, 
+	 {"Rate": "19.99", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Padded Flat Rate Envelope"}, 
+	 {"Rate": "19.99", "Mail Class": "Priority Mail Express 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Padded Flat Rate Envelope Hold For Pickup"}, 
+	 {"Rate": "5.95", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt;"}, 
+	 {"Rate": "17.90", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Large Flat Rate Box"}, 
+	 {"Rate": "12.65", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Medium Flat Rate Box"}, 
+	 {"Rate": "5.95", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Small Flat Rate Box"}, 
+	 {"Rate": "5.75", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Flat Rate Envelope"}, 
+	 {"Rate": "5.90", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Legal Flat Rate Envelope"}, 
+	 {"Rate": "6.10", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Padded Flat Rate Envelope"}, 
+	 {"Rate": "5.75", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Gift Card Flat Rate Envelope"}, 
+	 {"Rate": "5.75", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Small Flat Rate Envelope"}, 
+	 {"Rate": "5.75", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt; Window Flat Rate Envelope"}, 
+	 {"Rate": "3.17", "Mail Class": "Media Mail Parcel"}, 
+	 {"Rate": "3.02", "Mail Class": "Library Mail Parcel"
+	}]
+}
+	</code></pre>
+
+	<h4>
+	<a id="user-content-sample-get-request-with-mail-class-specified" class="anchor" href="#sample-get-request-with-mail-class-specified" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sample GET Request with Mail Class Specified</h4>
+
+	<pre><code>/rates/?o_zip=78756&amp;d_zip=78701&amp;lbs=2&amp;mail_class=priority
+	</code></pre>
+
+	<h4>
+	<a id="user-content-sample-response-1" class="anchor" href="#sample-response-1" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sample Response</h4>
+
+	<pre><code>
+{"data": 
+	[{"Rate": "5.95", "Mail Class": "Priority Mail 1-Day&amp;lt;sup&amp;gt;&amp;#8482;&amp;lt;/sup&amp;gt;"}
+	]
+}
+	</code></pre>
+	              </div>
+	            </div>
+	          </div>
+        
+
+	      </div>
+	    </div>
+	  </div>
+
+{% endblock %}
