@@ -4,7 +4,8 @@ from django.views.decorators.http import require_GET
 from django.views.decorators.gzip import gzip_page
 
 import requests
-from api import get_rates_from_usps, get_label_from_usps, BadRequestError
+from api import get_rates_from_usps, get_label_from_usps
+from requesters import BadRequestError
 
 def bad_error(e):
     data = HttpResponse(status=400)  
